@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  # Servicio Backend (Python) - Sin cambios
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - FLASK_ENV=development
+
+  # Servicio Frontend (React) - CAMBIO AQUÍ
+  frontend:
+    build: ./frontend  # <--- Antes era ".", ahora es "./frontend"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:5000

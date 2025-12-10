@@ -28,7 +28,7 @@ export function EnergyChart() {
       const payload = {
         hour: new Date().getHours(),
         // Variamos la temperatura entre 19°C y 21°C aleatoriamente
-        temperature: 20 + (Math.random() * 2 - 1), 
+        temperature: 20 + (Math.random() * 2 - 1),
         // Variamos el voltaje entre 225V y 235V
         voltage: 230 + (Math.random() * 10 - 5)
       };
@@ -37,7 +37,7 @@ export function EnergyChart() {
       console.log("📡 Solicitando predicción...");
       const response = await axios.post('http://localhost:5000/predict', payload);
       console.log("✅ Dato recibido:", response.data);
-      
+
       const predictionValue = response.data.predicted_load_kw;
       const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
@@ -47,14 +47,14 @@ export function EnergyChart() {
         //historical: parseFloat((predictionValue + (Math.random() * 1 - 0.5)).toFixed(2)), 
         // Variación más pequeña (+/- 0.2 kW)
         historical: parseFloat((predictionValue + (Math.random() * 0.4 - 0.2)).toFixed(2)),
-        
+
         prediction: predictionValue,
         threshold: 5.5
       };
 
       setData(prevData => {
         const newArray = [...prevData, newDataPoint];
-        if (newArray.length > 20) newArray.shift(); 
+        if (newArray.length > 20) newArray.shift();
         return newArray;
       });
       setError(false);
@@ -66,7 +66,7 @@ export function EnergyChart() {
   };
 
   useEffect(() => {
-    fetchPrediction(); 
+    fetchPrediction();
     const interval = setInterval(fetchPrediction, 3000);
     return () => clearInterval(interval);
   }, []);
@@ -92,11 +92,11 @@ export function EnergyChart() {
     // ⚠️ CAMBIO CLAVE: Usamos style={{ height: '400px' }} para forzar la altura
     <div style={{ width: '100%', height: '400px', position: 'relative' }}>
       {error && (
-        <div style={{ position: 'absolute', top: 0, right: 0, color: 'red', background: 'rgba(50,0,0,0.5)', padding: '5px' }}>
-          ⚠ Error de conexión
+        <div style={{ position: 'absolute', top: 0, right: 0, color: '#FFCC00', background: 'rgba(50,0,0,0.5)', padding: '5px' }}>
+          ⏳ Entrenando modelo..
         </div>
       )}
-      
+
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#333" />
@@ -104,14 +104,14 @@ export function EnergyChart() {
           <YAxis stroke="#888" tick={{ fontSize: 12 }} domain={[0, 'auto']} />
           <Tooltip content={<CustomTooltip />} />
           <ReferenceLine y={5.5} stroke="red" strokeDasharray="3 3" />
-          
+
           {/* CAMBIO CLAVE: dot={true} permite ver puntos individuales antes de que se forme la línea */}
           <Line
             type="monotone"
             dataKey="historical"
             stroke="#29B5E8"
             strokeWidth={3}
-            dot={{ r: 4 }} 
+            dot={{ r: 4 }}
             name="Consumo Real"
             isAnimationActive={false}
           />

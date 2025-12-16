@@ -81,6 +81,31 @@ def predict():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/appliance-breakdown', methods=['GET', 'POST'])
+def appliance_breakdown():
+    try:
+        # Generar datos aleatorios pero realistas
+        # Variación pequeña para que se note en el frontend
+        import random
+        
+        kitchen = round(2.5 + random.uniform(-0.5, 0.8), 2)
+        laundry = round(1.2 + random.uniform(-0.3, 0.5), 2)
+        ac = round(3.0 + random.uniform(-0.5, 1.0), 2)
+        lighting = round(0.7 + random.uniform(-0.1, 0.2), 2)
+        entertainment = round(1.0 + random.uniform(-0.2, 0.4), 2)
+
+        data = [
+            { "name": 'Kitchen', "consumption": kitchen, "color": '#29B5E8' },
+            { "name": 'Laundry', "consumption": laundry, "color": '#00CC96' },
+            { "name": 'AC', "consumption": ac, "color": '#FF4B4B' },
+            { "name": 'Lighting', "consumption": lighting, "color": '#9D4EDD' },
+            { "name": 'Entertainment', "consumption": entertainment, "color": '#FFA500' }
+        ]
+        
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # host='0.0.0.0' es CRÍTICO para que Docker funcione
     app.run(debug=True, host='0.0.0.0', port=5000)

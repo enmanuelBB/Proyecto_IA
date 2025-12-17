@@ -16,7 +16,7 @@ SCALER_Y_FILE = 'scaler_y.pkl'
 def train():
     print("Iniciando entrenamiento de ElectrIA...")
 
-    # 1. Cargar Dataset UCI 
+    # Cargar Dataset UCI 
     print("Descargando datos (esto puede tardar unos minutos)....")
     try:
         dataset = fetch_ucirepo(id=235)
@@ -25,7 +25,7 @@ def train():
         print(f"Error descargando dataset: {e}")
         return
 
-    # 2. Preprocesamiento
+    # Preprocesamiento
     print("Limpiando y procesando datos...")
     df = X.copy()
     
@@ -55,7 +55,7 @@ def train():
     features = ['hour', 'month', 'weekday', 'temperature', 'Voltage', 'Global_intensity']
     target = 'Global_active_power'
 
-    # Verificar que existen las columnas antes de seguir
+    # Verificar que existen las columnas
     missing_cols = [col for col in features if col not in df_hourly.columns]
     if missing_cols:
         print(f"Error: Faltan columnas tras el procesamiento: {missing_cols}")
@@ -64,7 +64,7 @@ def train():
     X_final = df_hourly[features]
     y_final = df_hourly[target]
 
-    # 3. Escalar datos
+    #  Escalar datos
     scaler_X = StandardScaler()
     scaler_y = StandardScaler()
 
@@ -73,7 +73,7 @@ def train():
 
     X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_scaled, test_size=0.2, random_state=42)
 
-    # 4. Entrenamiento MLP
+    #  Entrenamiento MLP
     print("Entrenando Red Neuronal (MLP)...")
     mlp = MLPRegressor(
         hidden_layer_sizes=(100, 50),
@@ -85,12 +85,12 @@ def train():
 
     mlp.fit(X_train, y_train.ravel())
 
-    # 5. Evaluación rápida
+    #  Evaluación rápida
     pred = mlp.predict(X_test)
     r2 = r2_score(y_test, pred)
     print(f"Entrenamiento finalizado. R2 Score: {r2:.4f}")
 
-    # 6. Guardar
+    #Guardar
     joblib.dump(mlp, MODEL_FILE)
     joblib.dump(scaler_X, SCALER_X_FILE)
     joblib.dump(scaler_y, SCALER_Y_FILE)

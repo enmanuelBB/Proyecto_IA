@@ -18,6 +18,7 @@ El proyecto se organiza en las siguientes carpetas principales:
   - train_model.py: Script para entrenamiento del modelo.
   - model_electria.pkl: Modelo entrenado serializado.
   - requirements.txt: Dependencias de Python.
+  - reporte.py: Script para generar reportes PDF.
 
 - /frontend
   Contiene la interfaz de usuario desarrollada en React con Vite.
@@ -55,5 +56,4 @@ NOTAS ADICIONALES
 -----------------
 - El frontend está configurado para comunicarse con el backend a través de la variable
   de entorno VITE_API_URL definida en el docker-compose.yml.
-- Si necesita detener los servicios, presione Ctrl+C en la terminal o ejecute:
-  docker-compose down
+- Si necesita detener los servicios, presione Ctrl+C en la terminal.

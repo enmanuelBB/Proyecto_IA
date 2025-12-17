@@ -2,15 +2,21 @@ import { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Brush } from 'recharts';
 import axios from 'axios';
 
-interface DataPoint {
+// Export interface so App.tsx can use it
+export interface DataPoint {
   time: string;
   historical: number | null;
   prediction: number | null;
   threshold: number;
 }
 
-export function EnergyChart() {
-  const [data, setData] = useState<DataPoint[]>([]);
+interface EnergyChartProps {
+  data: DataPoint[];
+  onNewData: (point: DataPoint) => void;
+  simulationKey?: number;
+}
+
+export function EnergyChart({ data, onNewData, simulationKey }: EnergyChartProps) {
   const [error, setError] = useState(false);
 
   // Estado para controlar el Brush (zoom/scrolling)
@@ -20,13 +26,30 @@ export function EnergyChart() {
   // Por defecto true (al inicio estamos al final)
   const isAutoScrollRef = useRef(true);
 
+  // Efecto para manejar el STICKY SCROLL cuando cambia `data`
+  useEffect(() => {
+    if (isAutoScrollRef.current && data.length > 0) {
+      const currentWindowSize = (brushState?.endIndex ?? 0) - (brushState?.startIndex ?? 0);
+      const windowSize = currentWindowSize > 0 ? currentWindowSize : 20;
+
+      const newEndIndex = data.length - 1;
+      const newStartIndex = Math.max(0, newEndIndex - windowSize);
+
+      setBrushState({ startIndex: newStartIndex, endIndex: newEndIndex });
+    } else if (data.length === 0) {
+      setBrushState({ startIndex: 0, endIndex: 0 });
+    }
+  }, [data]);
+
+
   const fetchPrediction = async () => {
     try {
       // 1. Datos para la IA (Con pequeña variación para que la gráfica baile)
+      // REDUCIDO: Variación más suave para que no salte tanto
       const payload = {
         hour: new Date().getHours(),
-        temperature: 20 + (Math.random() * 2 - 1),
-        voltage: 230 + (Math.random() * 10 - 5)
+        temperature: 20 + (Math.random() * 0.5 - 0.25),
+        voltage: 230 + (Math.random() * 2 - 1)
       };
 
       // 2. Petición al servidor
@@ -36,37 +59,14 @@ export function EnergyChart() {
 
       const newDataPoint: DataPoint = {
         time: currentTime,
-        historical: parseFloat((predictionValue + (Math.random() * 0.4 - 0.2)).toFixed(2)),
+        // REDUCIDO: Variación muy pequeña para que el valor real siga al predictivo de cerca
+        historical: parseFloat((predictionValue + (Math.random() * 0.2 - 0.1)).toFixed(2)),
         prediction: predictionValue,
         threshold: 5.5
       };
 
-      setData(prevData => {
-        const newData = [...prevData, newDataPoint];
-
-        // Lógica Sticky Scroll:
-        // Si estamos en modo auto-scroll, actualizamos el brush para mostrar lo nuevo
-        if (isAutoScrollRef.current && prevData.length > 0) {
-          // Calculamos el tamaño de la ventana actual
-          const currentWindowSize = (brushState?.endIndex ?? 0) - (brushState?.startIndex ?? 0);
-
-          // Si es la primera carga o ventana inválida, mostramos un rango por defecto (ej. últimos 20)
-          const windowSize = currentWindowSize > 0 ? currentWindowSize : 20;
-
-          const newEndIndex = newData.length - 1;
-          // Aseguramos que el start no sea negativo
-          const newStartIndex = Math.max(0, newEndIndex - windowSize);
-
-          // Usamos setTimeout para evitar conflictos de renderizado con Recharts en el mismo ciclo (opcional pero seguro)
-          // En este caso actualizamos el estado directamente, React lo batcheará
-          setBrushState({ startIndex: newStartIndex, endIndex: newEndIndex });
-        } else if (prevData.length === 0) {
-          // Primera vez que llegan datos
-          setBrushState({ startIndex: 0, endIndex: 0 });
-        }
-
-        return newData;
-      });
+      // Notificamos al padre (App) del nuevo dato
+      onNewData(newDataPoint);
       setError(false);
 
     } catch (err) {
@@ -122,7 +122,7 @@ export function EnergyChart() {
         </div>
       )}
 
-      {/* Indicador visual de modo historia (opcional) */}
+      {/* Indicador visual de modo historia */}
       {!isAutoScrollRef.current && data.length > 0 && (
         <div style={{ position: 'absolute', top: 10, left: 50, zIndex: 10, backgroundColor: 'rgba(41, 181, 232, 0.2)', padding: '4px 8px', borderRadius: '4px', border: '1px solid #29B5E8', color: '#29B5E8', fontSize: '12px' }}>
           ⏸️ Historial (Scroll pausado)

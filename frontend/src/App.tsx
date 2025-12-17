@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from './components/ui/card';
 import { Button } from './components/ui/button';
 import { Slider } from './components/ui/slider';
 import { Alert, AlertDescription } from './components/ui/alert';
-import { ArrowUp, Zap, TrendingUp, Gauge, AlertTriangle } from 'lucide-react';
+import { ArrowUp, Zap, TrendingUp, Gauge, AlertTriangle, Download } from 'lucide-react';
 import { MetricCard } from './components/MetricCard';
-import { EnergyChart } from './components/EnergyChart';
+import { EnergyChart, DataPoint } from './components/EnergyChart';
 import { ApplianceBreakdown } from './components/ApplianceBreakdown';
 
 export default function App() {
@@ -14,6 +14,14 @@ export default function App() {
   const [temperature, setTemperature] = useState([22]);
   const [activeAppliances, setActiveAppliances] = useState([5]);
   const [simulationRun, setSimulationRun] = useState(0);
+
+  // Estado global de datos (Elevado desde EnergyChart)
+  const [energyData, setEnergyData] = useState<DataPoint[]>([]);
+
+  // Callback cuando EnergyChart trae nuevos datos
+  const handleNewData = (newDataPoint: DataPoint) => {
+    setEnergyData(prev => [...prev, newDataPoint]);
+  };
 
   // Update clock every second
   useEffect(() => {
@@ -27,13 +35,55 @@ export default function App() {
     setSimulationRun(prev => prev + 1);
   };
 
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    console.log("⬇️ Solicitando reporte PDF al backend...");
+    setIsDownloading(true);
+    try {
+      if (energyData.length === 0) {
+        alert("No hay datos suficientes para generar el reporte. Espera unos segundos.");
+        return;
+      }
+
+      const response = await fetch('http://localhost:5000/generate-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ data: energyData })
+      });
+
+      if (!response.ok) throw new Error("Error en respuesta del servidor");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Reporte_ElectrIA_Backend_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      console.log("✅ Reporte PDF descargado.");
+
+    } catch (error) {
+      console.error("❌ Error descargando reporte:", error);
+      alert("Error al conectar con el servidor de reportes.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#0E1117' }}>
+
       {/* Sidebar */}
       <div className="w-80 border-r p-6 flex flex-col gap-6" style={{ borderColor: '#262730' }}>
         <div>
           <h2 className="mb-6" style={{ color: '#FAFAFA' }}>Simulation Parameters</h2>
-          
+
           {/* Time of Day Slider */}
           <div className="mb-8">
             <div className="flex justify-between mb-3">
@@ -82,10 +132,10 @@ export default function App() {
             />
           </div>
 
-          <Button 
+          <Button
             onClick={handleRunSimulation}
             className="w-full"
-            style={{ 
+            style={{
               backgroundColor: '#29B5E8',
               color: '#0E1117'
             }}
@@ -115,7 +165,7 @@ export default function App() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-8">
+      <div className="flex-1 p-8" id="dashboard-content">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center gap-3">
@@ -131,6 +181,44 @@ export default function App() {
             <div style={{ color: '#29B5E8' }}>
               {currentTime.toLocaleTimeString()}
             </div>
+
+            <Button
+              id="download-btn"
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="mt-2 text-xs transition-all duration-300 transform hover:scale-105 active:scale-95"
+              style={{
+                background: 'linear-gradient(45deg, #29B5E8, #00CC96)',
+                color: '#0E1117',
+                border: 'none',
+                boxShadow: '0 4px 15px rgba(41, 181, 232, 0.3)',
+                fontWeight: 'bold',
+                padding: '8px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              {isDownloading ? (
+                <>
+                  <div style={{ width: '12px', height: '12px', border: '2px solid #0E1117', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  Export Report
+                </>
+              )}
+            </Button>
+
+            {/* Keyframe for spinner if not in global css */}
+            <style>{`
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+             `}</style>
+
           </div>
         </div>
 
@@ -161,7 +249,7 @@ export default function App() {
         <Alert className="mb-8 border-0" style={{ backgroundColor: '#2A1A1A' }}>
           <AlertTriangle className="h-5 w-5" style={{ color: '#FF4B4B' }} />
           <AlertDescription style={{ color: '#FAFAFA' }}>
-            <strong style={{ color: '#FF4B4B' }}>WARNING:</strong> High Demand Predicted at 19:00 hours. 
+            <strong style={{ color: '#FF4B4B' }}>WARNING:</strong> High Demand Predicted at 19:00 hours.
             <span style={{ color: '#B8B8B8' }}> Suggestion: Turn off HVAC.</span>
           </AlertDescription>
         </Alert>
@@ -172,7 +260,12 @@ export default function App() {
             <CardTitle style={{ color: '#FAFAFA' }}>Energy Consumption Forecast</CardTitle>
           </CardHeader>
           <CardContent>
-            <EnergyChart simulationKey={simulationRun} />
+            {/* Pasamos data y callback al chart */}
+            <EnergyChart
+              data={energyData}
+              onNewData={handleNewData}
+              simulationKey={simulationRun}
+            />
           </CardContent>
         </Card>
 

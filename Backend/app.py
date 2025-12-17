@@ -1,7 +1,8 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file, make_response
 from flask_cors import CORS
 import joblib
 import numpy as np
+import reporte # Importamos nuestro modulo de reporte
 from datetime import datetime
 import os
 import sys
@@ -103,6 +104,30 @@ def appliance_breakdown():
         
         return jsonify(data)
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/generate-report', methods=['POST'])
+def generate_report():
+    try:
+        req_data = request.json
+        energy_data = req_data.get('data', [])
+        
+        if not energy_data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        print(f"Generando reporte PDF para {len(energy_data)} puntos de datos...")
+        
+        pdf_bytes = reporte.generate_pdf_report(energy_data)
+        
+        # Crear respuesta con el archivo
+        response = make_response(pdf_bytes)
+        response.headers['Content-Type'] = 'application/pdf'
+        response.headers['Content-Disposition'] = f'attachment; filename=Reporte_ElectrIA_{datetime.now().strftime("%Y%m%d_%H%M")}.pdf'
+        
+        return response
+
+    except Exception as e:
+        print(f"Error generando reporte: {e}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

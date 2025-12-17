@@ -1,6 +1,5 @@
 from fpdf import FPDF
 import matplotlib
-# Usar backend no interactivo para evitar errores de GUI en servidor
 matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
 import io
@@ -21,21 +20,18 @@ class PDFReport(FPDF):
         self.cell(0, 10, f'Pagina {self.page_no()}', 0, 0, 'C')
 
 def generate_pdf_report(data_list):
-    """
-    Genera un PDF con gráfica y tabla basado en los datos recibidos.
-    data_list: Lista de diccionarios { "time": str, "historical": float, "prediction": float }
-    """
+    
     pdf = PDFReport()
     pdf.add_page()
     pdf.set_font('Arial', '', 12)
 
-    # 1. Información General
+    #  Información General
     pdf.cell(0, 10, f'Fecha de Generacion: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}', 0, 1)
     pdf.ln(5)
 
-    # 2. Generar Gráfica
+    #  Generar Gráfica
     if data_list:
-        # Mostrar solo los ultimos 30 puntos en la grafica para que se vea bien
+       
         plot_data = data_list[-30:] if len(data_list) > 30 else data_list
         
         times = [d.get('time', '') for d in plot_data]
@@ -54,23 +50,21 @@ def generate_pdf_report(data_list):
         plt.xticks(rotation=45)
         plt.tight_layout()
 
-        # Guardar gráfica en buffer
+        
         img_buffer = io.BytesIO()
         plt.savefig(img_buffer, format='png', dpi=100)
         img_buffer.seek(0)
         plt.close()
 
-        # Insertar imagen en PDF (usando archivo temporal o stream si librería lo soporta directamente)
-        # FPDF estándar a veces requiere archivo físico, pero intentaremos stream si es versión modern
-        # Para compatibilidad segura, guardamos temp
+     
         temp_img_path = "temp_chart.png"
         with open(temp_img_path, "wb") as f:
             f.write(img_buffer.getbuffer())
         
-        # Ancho 190mm (casi todo A4)
+  
         pdf.image(temp_img_path, x=10, y=None, w=190)
         
-        # Limpiar
+      
         if os.path.exists(temp_img_path):
             os.remove(temp_img_path)
             
@@ -89,7 +83,7 @@ def generate_pdf_report(data_list):
 
     pdf.set_font('Arial', '', 10)
     
-    # Filas (Mostrar TODOS los datos como pidio el usuario)
+    # Filas 
     display_data = data_list
     
     for row in display_data:
@@ -102,20 +96,16 @@ def generate_pdf_report(data_list):
         pdf.cell(col_width, 10, f"{r:.2f}", 1)
         pdf.cell(col_width, 10, f"{p:.2f}", 1)
         
-        # Color texto diferencia? FPDF simple no soporta markups facil en celda, texto simple
+        
         pdf.cell(col_width, 10, f"{diff:+.2f}", 1)
         pdf.ln()
 
-    # Retornar bytes del PDF
-    # output(dest='S') returns string in latin-1, we need bytes properly
-    # Modern py-fpdf or fpdf2 supports output() returning bytes. 
-    # Let's try standard way for buffer
     
     try:
-        # FPDF 1.7.2 output returns stirng latin1. encoding to bytes
+       
         pdf_content = pdf.output(dest='S').encode('latin-1')
     except:
-        # FPDF2 might return bytes directly
+        
         pdf_content = pdf.output()
 
     return pdf_content
